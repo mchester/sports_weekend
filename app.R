@@ -1,6 +1,22 @@
 library(shiny)
 library(DT)
 
+ROSTER_FILE <- "roster.rds"
+
+load_roster <- function() {
+  if (file.exists(ROSTER_FILE)) {
+    readRDS(ROSTER_FILE)
+  } else {
+    data.frame(Member = character(), Friday = character(),
+               Saturday = character(), Sunday = character(),
+               stringsAsFactors = FALSE)
+  }
+}
+
+save_roster <- function(df) {
+  saveRDS(df, ROSTER_FILE)
+}
+
 family_members <- c("Mom", "Marshall", "Bonita", "June", "Justine", "Tristan", "Savannah", "Holly", "Nick", "Gordon", "Rowyn")
 
 ui <- fluidPage(
@@ -45,13 +61,7 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
-  roster <- reactiveVal(data.frame(
-    Member   = character(),
-    Friday   = character(),
-    Saturday = character(),
-    Sunday   = character(),
-    stringsAsFactors = FALSE
-  ))
+  roster <- reactiveVal(load_roster())
   
   observeEvent(input$submit, {
     if (input$member == "— Select —") {
@@ -59,7 +69,7 @@ server <- function(input, output, session) {
       return()
     }
     
-    fri <- if (input$fri_jays) "Blue Jays" else "—"
+    fri <- if (input$fri_jays) "Blue Jays 7:07 PM" else "—"
     
     sat_games <- "Blue Jays 3:07 PM"
     if (input$sat_leafs) sat_games <- paste0(sat_games, ", Maple Leafs 7:07 PM")
@@ -81,7 +91,10 @@ server <- function(input, output, session) {
     
     current <- roster()
     current <- current[current$Member != input$member, ]
-    roster(rbind(current, new_row))
+    updated <- rbind(current, new_row)
+    
+    roster(updated)
+    save_roster(updated)   # <-- persists to disk
     
     showNotification(paste0(input$member, " saved!"), type = "message")
   })
